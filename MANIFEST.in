@@ -1,0 +1,4 @@
+include README.txt
+include README.rst
+include setup.py
+recursive-include aiotarantool_queue *.py
