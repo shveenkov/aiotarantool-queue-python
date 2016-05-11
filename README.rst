@@ -2,13 +2,14 @@ Tarantool Queue bindings for work with python asyncio
 ----------------------------------------------------------
 Bindings require tarantool version 1.6 and aiotarantool connector:
 
-    $ pip install aiotarantool_queue
+    $ pip install aiotarantool_queue aiotarantool
 
 
 Try it example:
 
 .. code:: python
 
+    import asyncio
     import aiotarantool_queue
     import random
 
@@ -30,7 +31,7 @@ Try it example:
 
     loop = asyncio.get_event_loop()
 
-    queue = aiotarantool_queue.queue("127.0.0.1", 3301)
+    queue = aiotarantool_queue.Queue("127.0.0.1", 3301)
     put_tasks = [asyncio.async(put_job(queue))
                  for _ in range(20)]
 
@@ -42,4 +43,4 @@ Try it example:
     loop.close()
 
 
-This code makes it easy to develop your application to work with queue
+This code makes it easy to develop your application to work with queue.
