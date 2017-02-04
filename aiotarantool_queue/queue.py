@@ -7,6 +7,7 @@ See also: https://github.com/tarantool/queue
 
 import asyncio
 import aiotarantool
+from tarantool.const import ENCODING_DEFAULT
 
 READY = "r"
 TAKEN = "t"
@@ -231,7 +232,9 @@ class Queue(object):
         """
         pass
 
-    def __init__(self, host="localhost", port=33013, user=None, password=None, loop=None, lua_queue_name="box.queue"):
+    def __init__(self, host="localhost", port=33013, user=None, password=None, loop=None, lua_queue_name="box.queue",
+                 encoding=ENCODING_DEFAULT):
+
         if not host or not port:
             raise self.BadConfigException(
                 "host and port params must be not empty"
@@ -250,7 +253,8 @@ class Queue(object):
         self.tnt = aiotarantool.connect(self.host, self.port,
                                         user=self.user,
                                         password=self.password,
-                                        loop=self.loop)
+                                        loop=self.loop,
+                                        encoding=encoding)
 
     @asyncio.coroutine
     def put(self, tube, data, ttl=None, ttr=None, delay=None):

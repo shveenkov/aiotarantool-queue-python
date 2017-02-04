@@ -30,9 +30,10 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Database :: Front-Ends"
     ],
-    # install_requires=[
-    #     "tarantool>=0.5.1",
-    # ],
+    install_requires=[
+        "tarantool>=0.5.1",
+        "aiotarantool",
+    ],
     description="Tarantool Queue python bindings for asyncio",
     long_description=open("README.rst").read()
 )
