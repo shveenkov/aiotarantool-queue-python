@@ -15,13 +15,13 @@ class QueueBaseTestCase(unittest.TestCase):
 class QueueConnectionTestCase(QueueBaseTestCase):
     def test_simple_put_take(self):
         tube = self.queue.tube("test")
-        # task = yield from tube.put({"foo": "bar", "baz": 1})
+        # task = await tube.put({"foo": "bar", "baz": 1})
         # self.assertIsNotNone(task, "check put task")
         #
-        # task = yield from tube.take(.5)
+        # task = await tube.take(.5)
         # self.assertIsNotNone(task, "check put task")
         #
-        # yield from task.ack()
+        # await task.ack()
         # self.assertIsNotNone(task, "check put task")
 
         self.assertTrue(True, "asyncio test case stub")
