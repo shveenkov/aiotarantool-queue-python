@@ -7,7 +7,11 @@ See also: https://github.com/tarantool/queue
 
 import asyncio
 import aiotarantool
-from tarantool.const import ENCODING_DEFAULT
+
+try:
+    from tarantool.const import ENCODING_DEFAULT
+except ImportError:
+    from tarantool.utils import ENCODING_DEFAULT
 
 READY = "r"
 TAKEN = "t"
@@ -81,21 +85,19 @@ class Task(object):
         self.state = row[1]
         self.data = row[2]
 
-    @asyncio.coroutine
-    def ack(self):
+    async def ack(self):
         """
         Report task successful execution.
 
         Returns `True` is task is acked (task state is 'done' now).
         """
-        the_tuple = yield from self.queue.ack(self.tube, self.task_id)
+        the_tuple = await self.queue.ack(self.tube, self.task_id)
 
         self.update_from_tuple(the_tuple)
 
         return bool(self.state == DONE)
 
-    @asyncio.coroutine
-    def release(self, delay=None):
+    async def release(self, delay=None):
         """
         Put the task back into the queue.
 
@@ -104,7 +106,7 @@ class Task(object):
         Returns `True` is task is released (task state is 'ready'
         or 'delayed' if `delay` is set now).
         """
-        the_tuple = yield from self.queue.release(self.tube, self.task_id, delay=delay)
+        the_tuple = await self.queue.release(self.tube, self.task_id, delay=delay)
 
         self.update_from_tuple(the_tuple)
 
@@ -113,27 +115,25 @@ class Task(object):
         else:
             return bool(self.state == DELAYED)
 
-    @asyncio.coroutine
-    def peek(self):
+    async def peek(self):
         """
         Look at a task without changing its state.
 
         Always returns `True`.
         """
-        the_tuple = yield from self.queue.peek(self.tube, self.task_id)
+        the_tuple = await self.queue.peek(self.tube, self.task_id)
 
         self.update_from_tuple(the_tuple)
 
         return True
 
-    @asyncio.coroutine
-    def delete(self):
+    async def delete(self):
         """
         Delete task (in any state) permanently.
 
         Returns `True` is task is deleted.
         """
-        the_tuple = yield from self.queue.delete(self.tube, self.task_id)
+        the_tuple = await self.queue.delete(self.tube, self.task_id)
 
         self.update_from_tuple(the_tuple)
 
@@ -154,19 +154,17 @@ class Tube(object):
         """
         return "{0}.tube.{1}:{2}".format(self.queue.lua_queue_name, self.name, cmd_name)
 
-    @asyncio.coroutine
-    def put(self, data, ttl=None, ttr=None, delay=None):
+    async def put(self, data, ttl=None, ttr=None, delay=None):
         """
         Enqueue a task.
 
         Returns a `Task` object.
         """
-        the_tuple = yield from self.queue.put(self, data, ttl=ttl, ttr=ttr, delay=delay)
+        the_tuple = await self.queue.put(self, data, ttl=ttl, ttr=ttr, delay=delay)
         if the_tuple.rowcount:
             return Task.create_from_tuple(self, the_tuple)
 
-    @asyncio.coroutine
-    def take(self, timeout=None):
+    async def take(self, timeout=None):
         """
         Get a task from queue for execution.
 
@@ -174,7 +172,7 @@ class Tube(object):
 
         Returns either a `Task` object or `None`.
         """
-        the_tuple = yield from self.queue.take(self, timeout=timeout)
+        the_tuple = await self.queue.take(self, timeout=timeout)
 
         if the_tuple.rowcount:
             return Task.create_from_tuple(self, the_tuple)
@@ -190,25 +188,25 @@ class Queue(object):
         >>> queue = Queue("127.0.0.1", 33013, user="test", password="test")
         >>> tube = queue.tube("my_tube")
         # Put tasks into the queue
-        >>> yield from tube.put([1, 2, 3])
-        >>> yield from tube.put([2, 3, 4])
+        >>> await tube.put([1, 2, 3])
+        >>> await tube.put([2, 3, 4])
         # Get tasks from queue
-        >>> task1 = yield from tube.take()
-        >>> task2 = yield from tube.take()
+        >>> task1 = await tube.take()
+        >>> task2 = await tube.take()
         >>> print(task1.data)
             [1, 2, 3]
         >>> print(task2.data)
             [2, 3, 4]
         # Release tasks (put them back to queue)
-        >>> yield from task2.release()
-        >>> yield from task1.release()
+        >>> await task2.release()
+        >>> await task1.release()
         # Take task again
-        >>> task = yield from tube.take()
+        >>> task = await tube.take()
         >>> print(task.data)
             [1, 2, 3]
         # Take task and mark it as complete
-        >>> task = yield from tube.take()
-        >>> yield from task.ack()
+        >>> task = await tube.take()
+        >>> await task.ack()
             True
     """
     DatabaseError = aiotarantool.DatabaseError
@@ -256,8 +254,7 @@ class Queue(object):
                                         loop=self.loop,
                                         encoding=encoding)
 
-    @asyncio.coroutine
-    def put(self, tube, data, ttl=None, ttr=None, delay=None):
+    async def put(self, tube, data, ttl=None, ttr=None, delay=None):
         """
         Enqueue a task.
 
@@ -276,11 +273,10 @@ class Queue(object):
         if params:
             args += (params,)
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
         return res
 
-    @asyncio.coroutine
-    def take(self, tube, timeout=None):
+    async def take(self, tube, timeout=None):
         """
         Get a task from queue for execution.
 
@@ -295,11 +291,10 @@ class Queue(object):
         if timeout is not None:
             args += (timeout,)
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
         return res
 
-    @asyncio.coroutine
-    def ack(self, tube, task_id):
+    async def ack(self, tube, task_id):
         """
         Report task successful execution.
 
@@ -312,11 +307,10 @@ class Queue(object):
         cmd = tube.cmd("ack")
         args = (task_id,)
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
         return res
 
-    @asyncio.coroutine
-    def release(self, tube, task_id, delay=None):
+    async def release(self, tube, task_id, delay=None):
         """
         Put the task back into the queue.
 
@@ -333,11 +327,10 @@ class Queue(object):
         if params:
             args += (params,)
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
         return res
 
-    @asyncio.coroutine
-    def peek(self, tube, task_id):
+    async def peek(self, tube, task_id):
         """
         Look at a task without changing its state.
 
@@ -346,11 +339,10 @@ class Queue(object):
         cmd = tube.cmd("peek")
         args = (task_id,)
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
         return res
 
-    @asyncio.coroutine
-    def delete(self, tube, task_id):
+    async def delete(self, tube, task_id):
         """
         Delete task (in any state) permanently.
 
@@ -359,11 +351,10 @@ class Queue(object):
         cmd = tube.cmd("delete")
         args = (task_id,)
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
         return res
 
-    @asyncio.coroutine
-    def drop(self, tube):
+    async def drop(self, tube):
         """
         Drop entire query (if there are no in-progress tasks or workers).
 
@@ -372,7 +363,7 @@ class Queue(object):
         cmd = tube.cmd("drop")
         args = ()
 
-        res = yield from self.tnt.call(cmd, args)
+        res = await self.tnt.call(cmd, args)
 
         return bool(res.return_code == 0)
 
@@ -390,6 +381,5 @@ class Queue(object):
 
         return tube
 
-    @asyncio.coroutine
-    def close(self):
-        yield from self.tnt.close()
+    async def close(self):
+        await self.tnt.close()
